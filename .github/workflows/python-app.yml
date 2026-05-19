@@ -52,9 +52,12 @@ jobs:
 
     - name: Inject Navigation Menu into HTML Reports
       run: |
-        NAV_HTML="<div style='background:#333;padding:10px;text-align:center;font-family:sans-serif;'><a href='index.html' style='color:#fff;margin-right:20px;text-decoration:none;font-weight:bold;'>📊 Покрытие кода (Coverage)</a><a href='tests.html' style='color:#fff;text-decoration:none;font-weight:bold;'>🧪 Результаты тестов (Pytest)</a></div>"
-        sed -i "s|<body>|<body>${NAV_HTML}|g" htmlcov/index.html
-        sed -i "s|<body>|<body>${NAV_HTML}|g" htmlcov/tests.html
+        # Новое универсальное меню, которое гарантированно будет видно и на темном, и на светлом фоне
+        NAV_HTML="<div style='background:#222;padding:12px;text-align:center;font-family:sans-serif;border-bottom:2px solid #444;position:relative;z-index:99999;'><a href='index.html' style='color:#fff;margin-right:25px;text-decoration:none;font-weight:bold;font-size:16px;'>📊 Покрытие кода (Coverage)</a><a href='tests.html' style='color:#fff;text-decoration:none;font-weight:bold;font-size:16px;'>🧪 Результаты тестов (Pytest)</a></div>"
+        
+        # Заменяем любой тег <body> (даже с классами) на <body> + меню
+        sed -i -E "s|(<body[^>]*>)|\\1${NAV_HTML}|g" htmlcov/index.html
+        sed -i -E "s|(<body[^>]*>)|\\1${NAV_HTML}|g" htmlcov/tests.html
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
