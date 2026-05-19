@@ -1,0 +1,58 @@
+name: Test Coverage and Deploy to Pages
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-html
+
+    - name: Run tests & Generate Both Reports
+      run: |
+        # 1. Генерируем отчет по покрытию в htmlcov/index.html
+        # 2. Генерируем отчет по тестам в htmlcov/tests.html
+        # Используем || true, чтобы пайплайн не падал из-за умышленных ошибок в buggy_app
+        pytest --cov=. --cov-report=html:htmlcov --html=htmlcov/tests.html --self-contained-html || true
+
+    - name: Inject Navigation Menu into HTML Reports
+      run: |
+        # Этот скрипт добавляет удобное меню переключения вверху обоих отчетов
+        NAV_HTML="<div style='background:#333;padding:10px;text-align:center;font-family:sans-serif;'><a href='index.html' style='color:#fff;margin-right:20px;text-decoration:none;font-weight:bold;'>📊 Покрытие кода (Coverage)</a><a href='tests.html' style='color:#fff;text-decoration:none;font-weight:bold;'>🧪 Результаты тестов (Pytest)</a></div>"
+        
+        # Вставляем меню сразу после тега <body> в оба файла
+        sed -i "s|<body>|<body>${NAV_HTML}|g" htmlcov/index.html
+        sed -i "s|<body>|<body>${NAV_HTML}|g" htmlcov/tests.html
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: html-reports
+        path: htmlcov/
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./htmlcov
