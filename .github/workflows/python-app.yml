@@ -2,9 +2,17 @@ name: Test Coverage and Deploy to Pages
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: 
+      - "master"
+      - "main"
+      - "feature-tests-and-pages" # Твоя текущая ветка
+      - "feature/*"                # Любая ветка, начинающаяся с feature/
   pull_request:
-    branches: [ "master", "main" ]
+    branches: 
+      - "master"
+      - "main"
+      - "feature-tests-and-pages"
+      - "feature/*"
 
 permissions:
   contents: write
