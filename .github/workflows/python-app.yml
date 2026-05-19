@@ -5,8 +5,8 @@ on:
     branches: 
       - "master"
       - "main"
-      - "feature-tests-and-pages" # Твоя текущая ветка
-      - "feature/*"                # Любая ветка, начинающаяся с feature/
+      - "feature-tests-and-pages"
+      - "feature/*"
   pull_request:
     branches: 
       - "master"
@@ -15,12 +15,20 @@ on:
       - "feature/*"
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read   # Достаточно для чтения кода
+  pages: write      # Нужно для деплоя на Pages
+  id-token: write   # Нужно для авторизации деплоя
+
+# Разрешаем запускать только один деплой одновременно, чтобы они не конфликтовали
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
@@ -39,31 +47,23 @@ jobs:
 
     - name: Run tests & Generate Both Reports
       run: |
-        # 1. Генерируем отчет по покрытию в htmlcov/index.html
-        # 2. Генерируем отчет по тестам в htmlcov/tests.html
-        # Используем || true, чтобы пайплайн не падал из-за умышленных ошибок в buggy_app
+        # Генерируем отчеты в папку htmlcov
         pytest --cov=. --cov-report=html:htmlcov --html=htmlcov/tests.html --self-contained-html || true
 
     - name: Inject Navigation Menu into HTML Reports
       run: |
-        # Этот скрипт добавляет удобное меню переключения вверху обоих отчетов
         NAV_HTML="<div style='background:#333;padding:10px;text-align:center;font-family:sans-serif;'><a href='index.html' style='color:#fff;margin-right:20px;text-decoration:none;font-weight:bold;'>📊 Покрытие кода (Coverage)</a><a href='tests.html' style='color:#fff;text-decoration:none;font-weight:bold;'>🧪 Результаты тестов (Pytest)</a></div>"
-        
-        # Вставляем меню сразу после тега <body> в оба файла
         sed -i "s|<body>|<body>${NAV_HTML}|g" htmlcov/index.html
         sed -i "s|<body>|<body>${NAV_HTML}|g" htmlcov/tests.html
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+    - name: Setup Pages
+      uses: actions/configure-pages@v5
+
+    - name: Upload Artifact for Pages
+      uses: actions/upload-pages-artifact@v3
       with:
-        name: html-reports
-        path: htmlcov/
+        path: './htmlcov' # Папка, которую нужно опубликовать
 
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./htmlcov
-        publish_branch: gh-pages
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
+      id: deployment
+      uses: actions/deploy-pages@v4
